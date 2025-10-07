@@ -1,0 +1,239 @@
+<!--
+Simple Web Notepad for GitHub Pages
+- File: index.html
+- How to use: put this file in the root of a GitHub repository and enable GitHub Pages (choose branch: main / root or gh-pages). The page will act like a Notepad where paste always becomes plain text, and the content auto-saves to localStorage. Users can download the note as a .txt file or open a .txt file from disk.
+
+Features:
+- Plain-text-only paste (strips formatting)
+- Autosave to localStorage (per browser)
+- Manual Save -> downloads .txt
+- Open local .txt files
+- New / Clear / Copy to clipboard
+- Filename input for download
+- Last saved timestamp status
+- Responsive, single-file, static (works on GitHub Pages)
+-->
+
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notepad - GitHub Pages</title>
+  <style>
+    :root{--bg:#0f172a;--panel:#0b1220;--accent:#7c3aed;--muted:#9aa4b2;--text:#e6eef8}
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    body{background:linear-gradient(180deg,#071029 0%, #07142a 100%);color:var(--text);display:flex;align-items:center;justify-content:center;padding:24px}
+    .app{width:100%;max-width:1000px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.7);overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
+    header{display:flex;gap:12px;align-items:center;padding:12px 16px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-bottom:1px solid rgba(255,255,255,0.02)}
+    .brand{font-weight:600;letter-spacing:0.4px}
+    .toolbar{margin-left:auto;display:flex;gap:8px;align-items:center}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px}
+    button.secondary{border-style:dashed}
+    input[type=text]{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--text);padding:8px;border-radius:8px;width:180px}
+    .main{display:flex;gap:12px;padding:12px}
+    textarea{flex:1;min-height:60vh;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);padding:16px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;font-size:15px;resize:vertical;line-height:1.5}
+    .side{width:260px;display:flex;flex-direction:column;gap:8px}
+    .card{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+    small{color:var(--muted)}
+    .status{font-size:13px;color:var(--muted)}
+    .footer{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-top:1px solid rgba(255,255,255,0.02);font-size:13px}
+    @media (max-width:820px){.main{flex-direction:column}.side{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="app" role="application">
+    <header>
+      <div class="brand">Notepad (Plain text)</div>
+
+      <div class="toolbar">
+        <button id="btnNew" title="New">New</button>
+        <button id="btnOpen" title="Open">Open</button>
+        <input id="fileInput" type="file" accept=".txt" style="display:none">
+        <input id="filename" type="text" placeholder="filename.txt" value="note.txt">
+        <button id="btnSave" title="Download .txt">Save</button>
+        <button id="btnCopy" title="Copy to clipboard">Copy</button>
+        <button id="btnClear" class="secondary" title="Clear">Clear</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <textarea id="editor" placeholder="Viết ở đây... (Paste sẽ tự động chuyển về plain text)"></textarea>
+
+      <div class="side">
+        <div class="card">
+          <div><strong>Auto-save</strong></div>
+          <div class="status" id="autosaveStatus">Chưa lưu</div>
+          <small>Trang tự lưu nội dung trên trình duyệt (localStorage). Không gửi lên server.</small>
+        </div>
+
+        <div class="card">
+          <div><strong>Hướng dẫn nhanh</strong></div>
+          <ul>
+            <li>Paste bằng <kbd>Ctrl/Cmd+V</kbd> sẽ tự động bỏ định dạng.</li>
+            <li>Nhấn <em>Save</em> để tải file .txt về máy.</li>
+            <li>Dùng <em>Open</em> để mở file .txt từ máy.</li>
+            <li>Nội dung được lưu tự động trong trình duyệt (localStorage).</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div><strong>Tùy chọn</strong></div>
+          <label style="display:flex;flex-direction:column;gap:6px;margin-top:8px"><small>Auto-save interval (ms)</small>
+            <input id="autosaveInterval" type="text" value="800"></label>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer">
+      <div id="storageInfo">Local key: <code id="storageKey">notepad.githubpages.v1</code></div>
+      <div id="lastSaved">—</div>
+    </div>
+  </div>
+
+  <script>
+    // Config
+    const STORAGE_KEY = 'notepad.githubpages.v1';
+
+    // Elements
+    const editor = document.getElementById('editor');
+    const btnSave = document.getElementById('btnSave');
+    const btnOpen = document.getElementById('btnOpen');
+    const fileInput = document.getElementById('fileInput');
+    const btnNew = document.getElementById('btnNew');
+    const btnCopy = document.getElementById('btnCopy');
+    const btnClear = document.getElementById('btnClear');
+    const filenameInput = document.getElementById('filename');
+    const autosaveStatus = document.getElementById('autosaveStatus');
+    const lastSaved = document.getElementById('lastSaved');
+    const storageKeyEl = document.getElementById('storageKey');
+    const autosaveIntervalInput = document.getElementById('autosaveInterval');
+
+    storageKeyEl.textContent = STORAGE_KEY;
+
+    // Paste handler: force plain text
+    editor.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const before = editor.value.substring(0, start);
+      const after = editor.value.substring(end);
+      editor.value = before + text + after;
+      const pos = start + text.length;
+      editor.setSelectionRange(pos, pos);
+      triggerChange();
+    });
+
+    // Debounce helper
+    function debounce(fn, delay){
+      let t;
+      return function(...args){
+        clearTimeout(t);
+        t = setTimeout(()=>fn.apply(this,args), delay);
+      }
+    }
+
+    // Autosave to localStorage
+    function saveToLocal(){
+      try{
+        localStorage.setItem(STORAGE_KEY, editor.value);
+        const now = new Date();
+        autosaveStatus.textContent = 'Đã lưu tự động: ' + now.toLocaleString();
+        lastSaved.textContent = now.toLocaleString();
+      }catch(e){
+        autosaveStatus.textContent = 'Lỗi khi lưu';
+      }
+    }
+
+    const debouncedSave = debounce(saveToLocal, Number(autosaveIntervalInput.value) || 800);
+
+    function triggerChange(){
+      debouncedSave();
+    }
+
+    editor.addEventListener('input', triggerChange);
+
+    // Load from localStorage on start
+    function loadFromLocal(){
+      const content = localStorage.getItem(STORAGE_KEY);
+      if(content){
+        editor.value = content;
+        const now = new Date();
+        autosaveStatus.textContent = 'Đã khôi phục từ trình duyệt';
+        lastSaved.textContent = now.toLocaleString();
+      }
+    }
+
+    loadFromLocal();
+
+    // Save -> download file
+    btnSave.addEventListener('click', ()=>{
+      const filename = filenameInput.value.trim() || 'note.txt';
+      const blob = new Blob([editor.value], {type: 'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 500);
+    });
+
+    // Open local file
+    btnOpen.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        editor.value = String(reader.result);
+        triggerChange();
+      };
+      reader.readAsText(file, 'utf-8');
+      fileInput.value = '';
+    });
+
+    // New / Clear
+    btnNew.addEventListener('click', ()=>{
+      if(confirm('Tạo tệp mới? Nội dung chưa lưu sẽ bị ghi đè trong trình duyệt.')){
+        editor.value = '';
+        triggerChange();
+      }
+    });
+
+    btnClear.addEventListener('click', ()=>{
+      if(confirm('Xóa toàn bộ nội dung?')){
+        editor.value = '';
+        localStorage.removeItem(STORAGE_KEY);
+        autosaveStatus.textContent = 'Đã xóa';
+        lastSaved.textContent = '—';
+      }
+    });
+
+    // Copy
+    btnCopy.addEventListener('click', async ()=>{
+      try{
+        await navigator.clipboard.writeText(editor.value);
+        alert('Đã copy vào clipboard');
+      }catch(e){
+        alert('Không thể copy tự động — hãy chọn và Ctrl/Cmd+C');
+      }
+    });
+
+    // Autosave interval change
+    autosaveIntervalInput.addEventListener('change', ()=>{
+      const v = Number(autosaveIntervalInput.value) || 800;
+      // recreate debouncedSave with new interval
+      window.debouncedSave = debounce(saveToLocal, v);
+    });
+
+    // expose for debug
+    window.notepad = {
+      editor, saveToLocal, loadFromLocal, STORAGE_KEY
+    };
+
+  </script>
+</body>
+</html>
