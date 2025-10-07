@@ -71,7 +71,12 @@ header {
 #noteList li {
     border-radius: 10px;
     transition: all 0.2s;
+    padding: 0 !important;
     padding-left: 12px !important;
+}
+
+#noteList li > span {
+    width: 100%;
 }
 
 #noteList li:hover {
