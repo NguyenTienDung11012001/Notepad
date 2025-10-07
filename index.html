@@ -55,13 +55,15 @@
     };
 
     // --- Save note ---
-    saveBtn.onclick = () => {
+    function saveNote(isAuto = false) {
       const name = filenameInput.value.trim() || 'Ghi chú không tên';
       const content = editor.value;
       localStorage.setItem(name, content);
       updateList();
-      status.textContent = `Đã lưu "${name}"`;
-    };
+      status.textContent = isAuto ? `Đã tự động lưu "${name}"` : `Đã lưu "${name}"`;
+    }
+
+    saveBtn.onclick = () => saveNote(false);
 
     // --- Clear text ---
     clearBtn.onclick = () => {
@@ -71,8 +73,8 @@
 
     // --- Load note ---
     noteList.onclick = (e) => {
-      if (e.target.tagName === 'LI') {
-        const name = e.target.querySelector('span').textContent;
+      if (e.target.tagName === 'SPAN') {
+        const name = e.target.textContent;
         editor.value = localStorage.getItem(name);
         filenameInput.value = name;
         status.textContent = `Đang mở "${name}"`;
@@ -107,6 +109,15 @@
         }
       }
     }
+
+    // --- Auto save (2s delay after typing) ---
+    let autoSaveTimer;
+    editor.addEventListener('input', () => {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        if (editor.value.trim() !== '') saveNote(true);
+      }, 2000);
+    });
 
     // --- Init ---
     updateList();
