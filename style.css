@@ -65,10 +65,18 @@ header {
 
 #noteList {
     cursor: pointer;
+    padding-left: 0;
+}
+
+#noteList li {
+    border-radius: 10px;
+    transition: all 0.2s;
+    padding-left: 12px !important;
 }
 
 #noteList li:hover {
-    color: var(--accent);
+    color: white;
+    background-color: var(--accent);
 }
 
 button {

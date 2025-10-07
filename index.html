@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -30,7 +30,7 @@
 
     <div class="footer">
       <span class="status" id="status">Đã sẵn sàng.</span>
-      <small>Made with DungNT❤️ on GitHub Pages</small>
+      <small>Made with ❤️ on GitHub Pages</small>
     </div>
   </div>
 
@@ -43,11 +43,10 @@
     const status = document.getElementById('status');
     const themeToggle = document.getElementById('themeToggle');
 
-    // Load theme from localStorage
+    // --- Theme ---
     const currentTheme = localStorage.getItem('theme') || 'dark';
     document.body.setAttribute('data-theme', currentTheme);
     themeToggle.textContent = currentTheme === 'dark' ? '🌙' : '☀️';
-
     themeToggle.onclick = () => {
       const newTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       document.body.setAttribute('data-theme', newTheme);
@@ -55,7 +54,7 @@
       themeToggle.textContent = newTheme === 'dark' ? '🌙' : '☀️';
     };
 
-    // Save note
+    // --- Save note ---
     saveBtn.onclick = () => {
       const name = filenameInput.value.trim() || 'Ghi chú không tên';
       const content = editor.value;
@@ -64,35 +63,54 @@
       status.textContent = `Đã lưu "${name}"`;
     };
 
-    // Clear note
+    // --- Clear text ---
     clearBtn.onclick = () => {
       editor.value = '';
       status.textContent = 'Đã xóa nội dung.';
     };
 
-    // Load note from list
+    // --- Load note ---
     noteList.onclick = (e) => {
       if (e.target.tagName === 'LI') {
-        const name = e.target.textContent;
+        const name = e.target.querySelector('span').textContent;
         editor.value = localStorage.getItem(name);
         filenameInput.value = name;
         status.textContent = `Đang mở "${name}"`;
       }
     };
 
+    // --- Delete note ---
+    function deleteNote(name) {
+      if (confirm(`Bạn có chắc muốn xóa "${name}"?`)) {
+        localStorage.removeItem(name);
+        updateList();
+        status.textContent = `Đã xóa "${name}".`;
+      }
+    }
+
+    // --- Update list ---
     function updateList() {
       noteList.innerHTML = '';
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (!['theme'].includes(key)) {
+        if (key !== 'theme') {
           const li = document.createElement('li');
-          li.textContent = key;
+          li.innerHTML = `
+            <span style="cursor:pointer;">${key}</span>
+            <button class="delete-btn" onclick="deleteNote('${key}')">❌</button>
+          `;
+          li.style.display = 'flex';
+          li.style.justifyContent = 'space-between';
+          li.style.alignItems = 'center';
+          li.style.padding = '4px 0';
           noteList.appendChild(li);
         }
       }
     }
 
+    // --- Init ---
     updateList();
+    window.deleteNote = deleteNote;
   </script>
 </body>
 </html>
